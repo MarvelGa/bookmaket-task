@@ -1,0 +1,9 @@
+# Compiled Java class files
+*.class
+
+# JetBrains IDE
+.idea/
+
+# Maven
+target/
+dist/
