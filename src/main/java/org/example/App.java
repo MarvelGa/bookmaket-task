@@ -20,7 +20,7 @@ public class App implements CommandLineRunner {
     public void run(String... args) throws Exception {
         String fileName = "src/main/resources/input.txt";
         try {
-            service.parseFile(fileName);
+            service.readTheFile(fileName);
         } catch (Exception ex) {
 
         }
