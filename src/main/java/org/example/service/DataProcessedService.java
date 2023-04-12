@@ -3,7 +3,6 @@ package org.example.service;
 import org.example.exception.FileProperlyReadException;
 import org.example.model.BookMarket;
 import org.example.model.Detail;
-import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -12,7 +11,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Service
 public class DataProcessedService {
     private BookMarket bookMarket;
     private List<String> requiredForPrinting;
@@ -48,12 +46,12 @@ public class DataProcessedService {
         return content;
     }
 
-    private void writeFile () throws IOException {
-       try(BufferedWriter br = new BufferedWriter(new FileWriter(RESULT_FILE))){
-           for (String str : requiredForPrinting) {
-               br.write(str + System.lineSeparator());
-           }
-       }
+    private void writeFile() throws IOException {
+        try (BufferedWriter br = new BufferedWriter(new FileWriter(RESULT_FILE))) {
+            for (String str : requiredForPrinting) {
+                br.write(str + System.lineSeparator());
+            }
+        }
     }
 
     private void proceedData(String[] line) {
