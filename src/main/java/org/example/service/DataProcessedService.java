@@ -25,6 +25,7 @@ public class DataProcessedService {
     private static final String ORDER_OPTION = "o";
     private static final String BUY_ACTION_TYPE = "buy";
     private static final String SELL_ACTION_TYPE = "sell";
+    private static final String RESULT_FILE = "output.txt";
 
     private static final String ERROR_PROPERLY_READ = "Can't read data properly";
 
@@ -33,7 +34,7 @@ public class DataProcessedService {
         requiredForPrinting = new ArrayList<>();
         String[] lines = readTheFile(fileName);
         proceedData(lines);
-        System.out.println(requiredForPrinting);
+        writeFile();
     }
 
     private String[] readTheFile(String fileName) throws IOException {
@@ -45,6 +46,14 @@ public class DataProcessedService {
                     .collect(Collectors.joining(System.lineSeparator())).split("\r\n");
         }
         return content;
+    }
+
+    private void writeFile () throws IOException {
+       try(BufferedWriter br = new BufferedWriter(new FileWriter(RESULT_FILE))){
+           for (String str : requiredForPrinting) {
+               br.write(str + System.lineSeparator());
+           }
+       }
     }
 
     private void proceedData(String[] line) {
@@ -79,7 +88,7 @@ public class DataProcessedService {
                         .collect(Collectors.toList());
                 Integer currentSize = sortedDetail.get(0).getSize();
                 if (currentSize > 0) {
-                    sortedDetail.get(0).setSize(currentSize - 1);
+                    sortedDetail.get(0).setSize(currentSize - Integer.valueOf(parsedLine[2]));
                     bookMarket.setAsk(sortedDetail);
                 }
             }
@@ -94,7 +103,7 @@ public class DataProcessedService {
                         .collect(Collectors.toList());
                 Integer currentSize = sortedDetail.get(0).getSize();
                 if (currentSize > 0) {
-                    sortedDetail.get(0).setSize(currentSize - 1);
+                    sortedDetail.get(0).setSize(currentSize - Integer.valueOf(parsedLine[2]));
                     bookMarket.setBid(sortedDetail);
                 }
             }
