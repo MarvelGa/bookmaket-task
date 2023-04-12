@@ -62,7 +62,7 @@ public class DataProcessedService {
                     handlingOrder(elem);
                     break;
                 default:
-                   throw  new FileProperlyReadException(ERROR_PROPERLY_READ);
+                    throw new FileProperlyReadException(ERROR_PROPERLY_READ);
             }
         }
     }
