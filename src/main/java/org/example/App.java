@@ -1,15 +1,18 @@
 package org.example;
 
 import lombok.RequiredArgsConstructor;
+import org.example.exception.FileProperlyReadException;
 import org.example.service.DataProcessedService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.io.IOException;
+
 @RequiredArgsConstructor
 @SpringBootApplication
 public class App implements CommandLineRunner {
-   private final DataProcessedService service;
+    private final DataProcessedService service;
 
     public static void main(String[] args) {
         SpringApplication application = new SpringApplication(App.class);
@@ -17,12 +20,14 @@ public class App implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         String fileName = "src/main/resources/input.txt";
         try {
-            service.readTheFile(fileName);
-        } catch (Exception ex) {
-
+            service.readAndWriteResult(fileName);
+        } catch (IOException ex) {
+            ex.getMessage();
+        } catch (FileProperlyReadException ex) {
+            ex.getMessage();
         }
     }
 }
