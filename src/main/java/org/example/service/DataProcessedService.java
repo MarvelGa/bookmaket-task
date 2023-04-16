@@ -41,7 +41,7 @@ public class DataProcessedService {
         String[] content;
         try (BufferedReader bufferedReader = new BufferedReader(reader)) {
             content = bufferedReader.lines()
-                    .collect(Collectors.joining(System.lineSeparator())).split("\r\n");
+                    .collect(Collectors.joining(System.lineSeparator())).split("\n");
         }
         return content;
     }
