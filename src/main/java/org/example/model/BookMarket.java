@@ -3,6 +3,7 @@ package org.example.model;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 public class BookMarket {
     private List<Detail> bid;
@@ -27,5 +28,18 @@ public class BookMarket {
 
     public void setAsk(List<Detail> ask) {
         this.ask = ask;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BookMarket that = (BookMarket) o;
+        return Objects.equals(bid, that.bid) && Objects.equals(ask, that.ask);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(bid, ask);
     }
 }
