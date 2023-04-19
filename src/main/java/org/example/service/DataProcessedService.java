@@ -46,7 +46,7 @@ public class DataProcessedService {
     private void writeFile() throws IOException {
         try (BufferedWriter br = new BufferedWriter(new FileWriter(RESULT_FILE))) {
             for (String str : requiredForPrinting) {
-               br.write(str + System.lineSeparator());
+                br.write(str + System.lineSeparator());
             }
         }
     }
@@ -54,18 +54,18 @@ public class DataProcessedService {
     private void proceedData(String[] line) {
         for (String elem : line) {
             String[] parsedLine = Arrays.stream(elem.split(","))
-                    .filter(el->el.trim().length()>0)
-                    .toArray(String []::new);
+                    .filter(el -> el.trim().length() > 0)
+                    .toArray(String[]::new);
             String requiredOperation = parsedLine[0];
             switch (requiredOperation) {
                 case UPDATE_OPTION:
                     updateOrderBook(parsedLine[1], parsedLine[2], parsedLine[3]);
                     break;
                 case PRINT_OPTION:
-                   findAndPrint(elem);
+                    findAndPrint(elem);
                     break;
                 case ORDER_OPTION:
-                  handlingOrder(elem);
+                    handlingOrder(elem);
                     break;
                 default:
                     throw new FileProperlyReadException(ERROR_PROPERLY_READ);
@@ -75,34 +75,38 @@ public class DataProcessedService {
 
     private void handlingOrder(String line) {
         String[] parsedLine = Arrays.stream(line.split(","))
-                .filter(el->el.trim().length()>0)
-                .toArray(String []::new);
+                .filter(el -> el.trim().length() > 0)
+                .toArray(String[]::new);
         if (parsedLine[1].equals(BUY_ACTION_TYPE)) {
-                Optional<Detail> bestAsk = getBestAskDetail();
+            Optional<Detail> bestAsk = getBestAskDetail();
+            if (bestAsk.isPresent()) {
                 Integer currentSize = bestAsk.get().getSize();
-                    bestAsk.get().setSize(currentSize - Integer.valueOf(parsedLine[2]));
+                bestAsk.get().setSize(currentSize - Integer.valueOf(parsedLine[2]));
+            }
         } else if (parsedLine[1].equals(SELL_ACTION_TYPE)) {
-                Optional<Detail> bestAsk = getBestAskDetail();
-                Optional<Detail> bestBid = Optional.ofNullable(bookMarket.getBid().stream()
-                        .filter(bid -> bid.getSize() > 0 && bid.getSize() < bestAsk.get().getSize())
-                        .sorted(Comparator.comparing(Detail::getPrice)
-                                .thenComparing(Detail::getSize)
-                                .reversed())
-                        .findFirst()
-                        .orElseThrow(() -> new FileProperlyReadException(ERROR_PROPERLY_READ)));
+            Optional<Detail> bestAsk = getBestAskDetail();
+            Optional<Detail> bestBid = Optional.ofNullable(bookMarket.getBid().stream()
+                    .filter(bid -> bid.getSize() >= 0 && bid.getSize() < bestAsk.get().getSize())
+                    .sorted(Comparator.comparing(Detail::getPrice)
+                            .thenComparing(Detail::getSize)
+                            .reversed())
+                    .findFirst()
+                    .orElseThrow(() -> new FileProperlyReadException(ERROR_PROPERLY_READ)));
+            if (bestBid.isPresent()) {
                 Integer currentSize = bestBid.get().getSize();
                 bestBid.get().setSize(currentSize - Integer.valueOf(parsedLine[2]));
+            }
         }
     }
 
     private Optional<Detail> getBestAskDetail() {
-        Optional<Detail> bestAsk = Optional.ofNullable(bookMarket.getAsk().stream()
-                .filter(ask -> ask.getSize() > 0)
+        return Optional.ofNullable(bookMarket.getAsk().stream()
+                .filter(ask -> ask.getSize() >= 0)
                 .sorted(Comparator.comparing(Detail::getPrice)
                         .thenComparing(Detail::getSize))
                 .findFirst()
                 .orElseThrow(() -> new FileProperlyReadException(ERROR_PROPERLY_READ)));
-        return bestAsk;
+
     }
 
     private void updateOrderBook(String price, String size, String type) {
@@ -118,8 +122,8 @@ public class DataProcessedService {
 
     private void findAndPrint(String line) {
         String[] parsedLine = Arrays.stream(line.split(","))
-                .filter(el->el.trim().length()>0)
-                .toArray(String []::new);
+                .filter(el -> el.trim().length() > 0)
+                .toArray(String[]::new);
         if (parsedLine.length == 3) {
             printSizeAtSpecifiedPrice(parsedLine);
         } else if (parsedLine[1].equals(BEST_BID_REQUEST)) {
@@ -133,23 +137,24 @@ public class DataProcessedService {
     }
 
     private void printBestAsk() {
-            Optional<Detail> bestAskResult = getBestAskDetail();
+        Optional<Detail> bestAskResult = getBestAskDetail();
+        if (bestAskResult.isPresent()) {
             requiredForPrinting.add(bestAskResult.get().getPrice() + "," + bestAskResult.get().getSize());
+        }
     }
 
-    private Optional<Detail> getBestBid(){
-        Optional<Detail> bestBidResult = Optional.ofNullable(bookMarket.getBid().stream()
+    private Optional<Detail> getBestBid() {
+        return Optional.ofNullable(bookMarket.getBid().stream()
                 .sorted(Comparator.comparing(Detail::getPrice)
                         .thenComparing(Detail::getSize)
                         .reversed())
                 .findFirst()
                 .orElseThrow(() -> new FileProperlyReadException(ERROR_PROPERLY_READ)));
-        return bestBidResult;
     }
 
     private void printBestBid() {
-        Optional<Detail> bestBidResult =getBestBid();
-        requiredForPrinting.add(bestBidResult.get().getPrice() + "," + bestBidResult.get().getSize());
+        Optional<Detail> bestBidResult = getBestBid();
+        bestBidResult.ifPresent(detail -> requiredForPrinting.add(detail.getPrice() + "," + detail.getSize()));
     }
 
     private void printSizeAtSpecifiedPrice(String[] parsedLine) {
@@ -168,28 +173,24 @@ public class DataProcessedService {
                 .findFirst();
 
 
-        if (foundedBid.isPresent()){
-            requiredForPrinting.add(String.valueOf(foundedBid.get().getSize()));
-        }
-        if (foundedAsk.isPresent()){
-            requiredForPrinting.add(String.valueOf(foundedAsk.get().getSize()));
-        }
-        if (foundedSpread.isPresent()){
-            requiredForPrinting.add(String.valueOf(foundedSpread.get().getSize()));
-        }
+        foundedBid.ifPresent(detail -> requiredForPrinting.add(String.valueOf(detail.getSize())));
+        foundedAsk.ifPresent(detail -> requiredForPrinting.add(String.valueOf(detail.getSize())));
+        foundedSpread.ifPresent(detail -> requiredForPrinting.add(String.valueOf(detail.getSize())));
     }
 
-    private void determineSpread(){
+    private void determineSpread() {
         List<Detail> sortedAsk = bookMarket.getBid().stream()
                 .sorted(Comparator.comparing(Detail::getPrice)
                         .thenComparing(Comparator.comparing(Detail::getSize)))
                 .collect(Collectors.toList());
 
-       Integer askMin = sortedAsk.get(0).getPrice();
-       Integer bitMaxPrise = getBestBid().get().getPrice();
-
-        for (int i = bitMaxPrise+1; i <askMin ; i++) {
-            bookMarket.getSpread().add(new Detail(i, 0));
+        Optional<Detail> bestBid = getBestBid();
+        if (bestBid.isPresent() && !sortedAsk.isEmpty()) {
+            Integer askMin = sortedAsk.get(0).getPrice();
+            Integer bitMaxPrise = bestBid.get().getPrice();
+            for (int i = bitMaxPrise + 1; i < askMin; i++) {
+                bookMarket.getSpread().add(new Detail(i, 0));
+            }
         }
     }
 }
