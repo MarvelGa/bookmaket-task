@@ -5,10 +5,7 @@ import org.example.model.BookMarket;
 import org.example.model.Detail;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class DataProcessedService {
@@ -49,24 +46,26 @@ public class DataProcessedService {
     private void writeFile() throws IOException {
         try (BufferedWriter br = new BufferedWriter(new FileWriter(RESULT_FILE))) {
             for (String str : requiredForPrinting) {
-                br.write(str + System.lineSeparator());
+               br.write(str + System.lineSeparator());
             }
         }
     }
 
     private void proceedData(String[] line) {
         for (String elem : line) {
-            String[] parsedLine = elem.split(",");
+            String[] parsedLine = Arrays.stream(elem.split(","))
+                    .filter(el->el.trim().length()>0)
+                    .toArray(String []::new);
             String requiredOperation = parsedLine[0];
             switch (requiredOperation) {
                 case UPDATE_OPTION:
                     updateOrderBook(parsedLine[1], parsedLine[2], parsedLine[3]);
                     break;
                 case PRINT_OPTION:
-                    findAndPrint(elem);
+                   findAndPrint(elem);
                     break;
                 case ORDER_OPTION:
-                    handlingOrder(elem);
+                  handlingOrder(elem);
                     break;
                 default:
                     throw new FileProperlyReadException(ERROR_PROPERLY_READ);
@@ -75,39 +74,35 @@ public class DataProcessedService {
     }
 
     private void handlingOrder(String line) {
-        String[] parsedLine = line.split(",");
+        String[] parsedLine = Arrays.stream(line.split(","))
+                .filter(el->el.trim().length()>0)
+                .toArray(String []::new);
         if (parsedLine[1].equals(BUY_ACTION_TYPE)) {
-            if (bookMarket.getAsk().isEmpty()) {
-                requiredForPrinting.add("0");
-            } else {
-                List<Detail> sortedDetail = bookMarket.getAsk().stream()
-                        .sorted(Comparator.comparing(Detail::getPrice)
-                                .thenComparing(Detail::getSize))
-                        .collect(Collectors.toList());
-                Integer currentSize = sortedDetail.get(0).getSize();
-                if (currentSize > 0) {
-                    sortedDetail.get(0).setSize(currentSize - Integer.valueOf(parsedLine[2]));
-                    bookMarket.setAsk(sortedDetail);
-                }
-            }
+                Optional<Detail> bestAsk = getBestAskDetail();
+                Integer currentSize = bestAsk.get().getSize();
+                    bestAsk.get().setSize(currentSize - Integer.valueOf(parsedLine[2]));
         } else if (parsedLine[1].equals(SELL_ACTION_TYPE)) {
-            if (bookMarket.getAsk().isEmpty()) {
-                requiredForPrinting.add("0");
-            } else {
-                List<Detail> sortedDetail = bookMarket.getBid().stream()
+                Optional<Detail> bestAsk = getBestAskDetail();
+                Optional<Detail> bestBid = Optional.ofNullable(bookMarket.getBid().stream()
+                        .filter(bid -> bid.getSize() > 0 && bid.getSize() < bestAsk.get().getSize())
                         .sorted(Comparator.comparing(Detail::getPrice)
                                 .thenComparing(Detail::getSize)
                                 .reversed())
-                        .collect(Collectors.toList());
-                Integer currentSize = sortedDetail.get(0).getSize();
-                if (currentSize > 0) {
-                    sortedDetail.get(0).setSize(currentSize - Integer.valueOf(parsedLine[2]));
-                    bookMarket.setBid(sortedDetail);
-                }
-            }
-        } else {
-            throw new FileProperlyReadException(ERROR_PROPERLY_READ);
+                        .findFirst()
+                        .orElseThrow(() -> new FileProperlyReadException(ERROR_PROPERLY_READ)));
+                Integer currentSize = bestBid.get().getSize();
+                bestBid.get().setSize(currentSize - Integer.valueOf(parsedLine[2]));
         }
+    }
+
+    private Optional<Detail> getBestAskDetail() {
+        Optional<Detail> bestAsk = Optional.ofNullable(bookMarket.getAsk().stream()
+                .filter(ask -> ask.getSize() > 0)
+                .sorted(Comparator.comparing(Detail::getPrice)
+                        .thenComparing(Detail::getSize))
+                .findFirst()
+                .orElseThrow(() -> new FileProperlyReadException(ERROR_PROPERLY_READ)));
+        return bestAsk;
     }
 
     private void updateOrderBook(String price, String size, String type) {
@@ -122,74 +117,79 @@ public class DataProcessedService {
     }
 
     private void findAndPrint(String line) {
-        String[] parsedLine = line.split(",");
+        String[] parsedLine = Arrays.stream(line.split(","))
+                .filter(el->el.trim().length()>0)
+                .toArray(String []::new);
         if (parsedLine.length == 3) {
             printSizeAtSpecifiedPrice(parsedLine);
         } else if (parsedLine[1].equals(BEST_BID_REQUEST)) {
-            printBestBitSizeAndPrice();
+            printBestBid();
         } else if (parsedLine[1].equals(BEST_ASK_REQUEST)) {
-            printBestAskSizeAndPrice();
+            printBestAsk();
         } else {
             throw new FileProperlyReadException(ERROR_PROPERLY_READ);
         }
 
     }
 
-    private void printBestAskSizeAndPrice() {
-        if (bookMarket.getAsk().isEmpty()) {
-            requiredForPrinting.add("0");
-        } else {
-            Optional<Detail> bestAskResult = bookMarket.getAsk().stream()
-                    .sorted(Comparator.comparing(Detail::getPrice)
-                            .thenComparing(Detail::getSize)
-                            .reversed())
-                    .findFirst();
-            if (bestAskResult.isPresent()) {
-                requiredForPrinting.add(bestAskResult.get().getPrice() + "," + bestAskResult.get().getSize());
-            } else {
-                requiredForPrinting.add("0");
-            }
-        }
+    private void printBestAsk() {
+            Optional<Detail> bestAskResult = getBestAskDetail();
+            requiredForPrinting.add(bestAskResult.get().getPrice() + "," + bestAskResult.get().getSize());
     }
 
-    private void printBestBitSizeAndPrice() {
-        if (bookMarket.getBid().isEmpty()) {
-            requiredForPrinting.add("0");
-        } else {
-            Optional<Detail> bestBidResult = bookMarket.getBid().stream()
-                    .sorted(Comparator.comparing(Detail::getPrice)
-                            .thenComparing(Detail::getSize)
-                            .reversed())
-                    .findFirst();
-            if (bestBidResult.isPresent()) {
-                requiredForPrinting.add(bestBidResult.get().getPrice() + "," + bestBidResult.get().getSize());
-            } else {
-                requiredForPrinting.add("0");
-            }
-        }
+    private Optional<Detail> getBestBid(){
+        Optional<Detail> bestBidResult = Optional.ofNullable(bookMarket.getBid().stream()
+                .sorted(Comparator.comparing(Detail::getPrice)
+                        .thenComparing(Detail::getSize)
+                        .reversed())
+                .findFirst()
+                .orElseThrow(() -> new FileProperlyReadException(ERROR_PROPERLY_READ)));
+        return bestBidResult;
+    }
+
+    private void printBestBid() {
+        Optional<Detail> bestBidResult =getBestBid();
+        requiredForPrinting.add(bestBidResult.get().getPrice() + "," + bestBidResult.get().getSize());
     }
 
     private void printSizeAtSpecifiedPrice(String[] parsedLine) {
+        determineSpread();
         Integer requiredPrice = Integer.valueOf(parsedLine[2]);
-        int[] resultOfAsk = bookMarket.getAsk().stream()
+        Optional<Detail> foundedAsk = bookMarket.getAsk().stream()
                 .filter(el -> el.getPrice().equals(requiredPrice))
-                .mapToInt(Detail::getSize)
-                .toArray();
+                .findFirst();
 
-        int[] resultOfBid = bookMarket.getBid().stream()
+        Optional<Detail> foundedBid = bookMarket.getBid().stream()
                 .filter(el -> el.getPrice().equals(requiredPrice))
-                .mapToInt(Detail::getSize)
-                .toArray();
+                .findFirst();
 
-        if (resultOfBid.length != 0 && resultOfAsk.length != 0) {
-            int totalSize = resultOfBid[0] + resultOfAsk[0];
-            requiredForPrinting.add(String.valueOf(totalSize));
-        } else if (resultOfBid.length != 0) {
-            int bidSize = resultOfBid[0];
-            requiredForPrinting.add(String.valueOf(bidSize));
-        } else if (resultOfAsk.length != 0) {
-            int askSize = resultOfAsk[0];
-            requiredForPrinting.add(String.valueOf(askSize));
+        Optional<Detail> foundedSpread = bookMarket.getBid().stream()
+                .filter(el -> el.getPrice().equals(requiredPrice))
+                .findFirst();
+
+
+        if (foundedBid.isPresent()){
+            requiredForPrinting.add(String.valueOf(foundedBid.get().getSize()));
+        }
+        if (foundedAsk.isPresent()){
+            requiredForPrinting.add(String.valueOf(foundedAsk.get().getSize()));
+        }
+        if (foundedSpread.isPresent()){
+            requiredForPrinting.add(String.valueOf(foundedSpread.get().getSize()));
+        }
+    }
+
+    private void determineSpread(){
+        List<Detail> sortedAsk = bookMarket.getBid().stream()
+                .sorted(Comparator.comparing(Detail::getPrice)
+                        .thenComparing(Comparator.comparing(Detail::getSize)))
+                .collect(Collectors.toList());
+
+       Integer askMin = sortedAsk.get(0).getPrice();
+       Integer bitMaxPrise = getBestBid().get().getPrice();
+
+        for (int i = bitMaxPrise+1; i <askMin ; i++) {
+            bookMarket.getSpread().add(new Detail(i, 0));
         }
     }
 }
