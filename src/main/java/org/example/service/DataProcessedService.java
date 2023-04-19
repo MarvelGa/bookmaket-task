@@ -168,7 +168,7 @@ public class DataProcessedService {
                 .filter(el -> el.getPrice().equals(requiredPrice))
                 .findFirst();
 
-        Optional<Detail> foundedSpread = bookMarket.getBid().stream()
+        Optional<Detail> foundedSpread = bookMarket.getSpread().stream()
                 .filter(el -> el.getPrice().equals(requiredPrice))
                 .findFirst();
 
