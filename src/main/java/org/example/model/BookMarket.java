@@ -9,9 +9,12 @@ public class BookMarket {
     private List<Detail> bid;
     private List<Detail> ask;
 
+    private List<Detail> spread;
+
     public BookMarket() {
         this.bid = new LinkedList<>();
         this.ask = new LinkedList<>();
+        this.spread = new LinkedList<>();
     }
 
     public List<Detail> getBid() {
@@ -24,6 +27,14 @@ public class BookMarket {
 
     public List<Detail> getAsk() {
         return ask;
+    }
+
+    public List<Detail> getSpread() {
+        return spread;
+    }
+
+    public void setSpread(List<Detail> spread) {
+        this.spread = spread;
     }
 
     public void setAsk(List<Detail> ask) {
